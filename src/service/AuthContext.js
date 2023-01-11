@@ -28,7 +28,7 @@ export const AuthProvider = ({children}) => {
                         console.error(`Error adding document:, ${e}`)
                   }
                   setCurrentUser(createdUser.user)
-                  console.log(createdUser)
+                  // console.log(createdUser)
             })
             .catch((error)=>{
                   console.log(error.message)
@@ -37,7 +37,7 @@ export const AuthProvider = ({children}) => {
       const signIn = (email, password) =>{
             signInWithEmailAndPassword(auth, email, password)
             .then((userCredential)=>{
-                  console.log(userCredential.user)
+                  // console.log(userCredential.user)
                   setCurrentUser(userCredential.user)
                   getData(userCredential.user.uid)
                   router.push('/dashboard')
@@ -49,7 +49,7 @@ export const AuthProvider = ({children}) => {
       const logout = () =>{
             signOut(auth)
             .then((success)=>{
-                  console.log("success")
+                  console.log("logged out")
                   Cookies.remove("loggedIn")
                   setCurrentUser(undefined)
                   router.push('/')
@@ -103,17 +103,14 @@ export const AuthProvider = ({children}) => {
       }
       const getUsers =  async () =>{
             const colSnap =  await getDocs(collection(db, "users"));
-            console.log(colSnap)
+            // console.log(colSnap)
             let users = []
             colSnap.forEach((doc) => {
                   // doc.data() is never undefined for query doc snapshots
                   users.push(doc.data());
             })
-            console.log(users)
+            // console.log(users)
             setUsers(users)
-      }
-      const setLocalStorage = (userData) =>{
-            localStorage.setItem("user", JSON.stringify(userData))
       }
       const getLocalStorage = () =>{
            const data = JSON.parse(window.localStorage.getItem('user'))

@@ -1,7 +1,6 @@
 import React, { createContext,useState } from 'react'
-import { auth, db, storage } from '../config/firebase.config'
-import {ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { setDoc, doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { db } from '../config/firebase.config'
+import { setDoc, doc, getDoc, collection, getDocs, Timestamp, where, documentId, addDoc } from "firebase/firestore";
 
 export const ChatContext = createContext()
 
@@ -9,7 +8,23 @@ export const ChatContext = createContext()
 
 export const ChatProvider = ({children}) => {
       const [userChats, setUserChats ] = useState('')
+      const [currChatMess, setCurrChatMess] = useState()
+
       const getChats =  async (uid) =>{
+            const docRef = doc(db, "chats", where("users", "array-contains", `$${uid}`));
+            const docSnap = await getDocs(docRef);
+            console.log(docSnap)
+            if (docSnap.exists()) {
+                  console.log("Chat data:", docSnap.data());
+                  setUserChats(docSnap.data())
+            } else {
+            // doc.data() will be undefined in this case
+                  console.log("No such document!");
+            }
+      }     
+
+      // get open chat and its messages 
+      const getCurrentChat =  async (uid) =>{
                   const docRef = doc(db, "chats", uid);
                   const docSnap = await getDoc(docRef);
                   if (docSnap.exists()) {
@@ -20,104 +35,58 @@ export const ChatProvider = ({children}) => {
                         console.log("No such document!");
                   }
       }
-      const addMessage = async () =>{
-            try {
-                  const docRef = await setDoc(doc(db, 'users', createdUser.user.uid),{
-                        id: createdUser.user.uid, ...user
+      // self-explain 
+      const createChat = async (muid, ouid) =>{
+            // creation 
+            const users = [muid, ouid]
+            const sampleChat = {
+                  createdAt: Timestamp.now(),
+                  messages: [],
+                  users
+            }
+            const messagesSnap = await addDoc(collection(db, "chats"), sampleChat);
+            const chatId = messagesSnap.id
+            // update m chats arr
+            const mRef = await getDoc(doc(db, 'users', muid))
+            if (mRef.exists()) {
+                  const user = {...mRef.data()}
+                  user.chats.push(chatId)
+                  const Ref = await setDoc(doc(db, 'users', muid),{
+                        ...user
                   })
-                        console.log("Document written with ID: ", docRef)
-                        getData(createdUser.user.uid)
-                  } catch (e) {
-                        console.error(`Error adding document:, ${e}`)
+            }else{
+                  // add uid to find out which user broke later on 
+                  console.log("Could not update users chat ");
+            }
+            // update o chats arr
+            const oRef = await getDoc(doc(db, 'users', ouid))
+            if (oRef.exists()) {
+                  const user = {...oRef.data()}
+                  user.chats.push(chatId)
+                  const Ref = await setDoc(doc(db, 'users', ouid),{
+                        ...user
+                  })
+            }else{
+                  console.log("Could not update users chat ");
             }
       }
-      // const signIn = (email, password) =>{
-      //       signInWithEmailAndPassword(auth, email, password)
-      //       .then((userCredential)=>{
-      //             console.log(userCredential.user)
-      //             setCurrentUser(userCredential.user)
-      //             getData(userCredential.user.uid)
-      //             router.push('/dashboard')
-      //       })
-      //       .catch((error)=>{
-      //             console.log(error.message)
-      //       })
-      // }
-      // const logout = () =>{
-      //       signOut(auth)
-      //       .then((success)=>{
-      //             console.log("success")
-      //             Cookies.remove("loggedIn")
-      //             setCurrentUser(undefined)
-      //             router.push('/')
-      //       })
-      //       .catch((error)=>{
-      //             console.log(error)
-      //       })
-      // }
-      // const resetPassword = (email) =>{
-      //       return sendPasswordResetEmail(auth, email)
-      // }
-      // const changePassword = (password) => {
-      //       return updatePassword(currentUser,password)
-      // }
-      // const uploadPicture = (img) =>{
-      //       const child = `profile-picture/${currentUser.uid}/${img.name}`
-      //       const storageRef = ref(storage, child)
-      //       try {
-      //             uploadBytes(storageRef, img).then((snapshot)=>{
-      //                   getDownloadURL(ref(storage, snapshot.ref.fullPath)).then( async (url)=>{
-      //                         try {
-      //                               const docRef = doc(db, 'users', `${currentUser.uid}`)
-      //                               const docSnap = await getDoc(docRef)
-      //                               if (docSnap.exists()) {
-      //                                     await setDoc(docRef, {...docSnap.data(), profileImg: url})
-      //                                     getData(currentUser.uid)
-      //                                   } else {
-      //                                     // doc.data() will be undefined in this case
-      //                                     console.log("No such document!");
-      //                                   }
-      //                         } catch (error) {
-                                    
-      //                         }  console.log(url)
-      //                   })
-      //             })
-      //       } catch (error) {
-      //             console.log(error)
-      //       }
-      // }
-      // const getData =  async (uid) =>{
-      //       const docRef = doc(db, "users", uid);
-      //       const docSnap = await getDoc(docRef);
-      //       if (docSnap.exists()) {
-      //             console.log("Document data:", docSnap.data());
-      //             setUserData(docSnap.data())
-      //             getUsers()
-      //       } else {
-      //       // doc.data() will be undefined in this case
-      //             console.log("No such document!");
-      //       }
-      // }
-      // const getUsers =  async () =>{
-      //       const colSnap =  await getDocs(collection(db, "users"));
-      //       console.log(colSnap)
-      //       let users = []
-      //       colSnap.forEach((doc) => {
-      //             // doc.data() is never undefined for query doc snapshots
-      //             users.push(doc.data());
-      //       })
-      //       console.log(users)
-      //       setUsers(users)
-      // }
-      // const setLocalStorage = (userData) =>{
-      //       localStorage.setItem("user", JSON.stringify(userData))
-      // }
-      // const getLocalStorage = () =>{
-      //      const data = JSON.parse(window.localStorage.getItem('user'))
-      //      return data
-      // }
+      // self-explain 
+      const addMessage = async (uid, chat, user) =>{
+            const message = {
+                  sentAt: Timestamp.now(),
+                  sender: user,
+                  message: "Hello hi b"
+            }
+            const docData = {
+                  users: chat.users,
+                  messages: [...chat.messages, message ],
+                  createdAt: chat.createdAt,  
+            }
+            const messagesSnap = await setDoc(doc(db, 'chats', uid), docData);
+            getChats(uid)
+      }
   return (
-    <ChatContext.Provider value={{getChats, userChats}}>
+    <ChatContext.Provider value={{getCurrentChat, userChats, currChatMess, addMessage, createChat}}>
           {children}
     </ChatContext.Provider>
   )
